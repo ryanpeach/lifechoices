@@ -1,4 +1,5 @@
 from typing import Dict, List
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import defaultdict
 from math import ceil
@@ -19,6 +20,7 @@ def weekOfMonth(dt: datetime):
 
     return int(ceil(adjusted_dom/7.0))
 
+
 def monthdelta(date, delta):
     """
     REF: https://stackoverflow.com/questions/3424899/whats-the-simplest-way-to-subtract-a-month-from-a-date-in-python
@@ -30,7 +32,7 @@ def monthdelta(date, delta):
         31,30,31,30,31,31,30,31,30,31][m-1])
     return date.replace(day=d,month=m, year=y)
 
-
+# TODO: Append all dates removing the timestamp
 def plot_accounts(
         starting_plan: Plan,
         bridges: List[Bridge],
@@ -40,18 +42,25 @@ def plot_accounts(
     plan = starting_plan
     bridges_by_date = {b.trigger_date: b for b in bridges}
 
-    def generate_from_plan(p: Plan):
-        global accounts_by_name, this_accounts_by_name, once, daily, weekly, biweekly, monthly, yearly
+    @dataclass(frozen=False)
+    class generate_from_plan_output:
+        once: Dict[datetime, List[Once]]
+        daily: List[Daily]
+        weekly: Dict[int, List[Weekly]]
+        biweekly: Dict[int, Dict[int, List[BiWeekly]]] 
+        monthly: Dict[int, List[Monthly]] 
+        yearly: Dict[int, Dict[int, List[Yearly]]]
+        accounts_by_name: Dict[str, Account]
 
-        once: Dict[datetime, List[Once]] = defaultdict(list)
-        daily: List[Daily] = []
-        weekly: Dict[int, List[Weekly]] = defaultdict(list)
-        biweekly: Dict[int, Dict[int, List[BiWeekly]]] = defaultdict(lambda: defaultdict(list))
-        monthly: Dict[int, List[Monthly]] = defaultdict(list)
-        yearly: Dict[int, Dict[int, List[Yearly]]] = defaultdict(lambda: defaultdict(list))
+    def generate_from_plan(p: Plan) -> generate_from_plan_output:
+        once = defaultdict(list)
+        daily = []
+        weekly = defaultdict(list)
+        biweekly = defaultdict(lambda: defaultdict(list))
+        monthly = defaultdict(list)
+        yearly = defaultdict(lambda: defaultdict(list))
 
         accounts_by_name = {a.name: a for a in p.accounts}
-        this_accounts_by_name = accounts_by_name.copy()
         for t in p.transfers:
             if isinstance(t, Daily):
                 daily.append(t)
@@ -67,29 +76,37 @@ def plot_accounts(
                 yearly[t.month][t.dayOfMonth].append(t)
             else:
                 raise TypeError(f"Type '{type(t)}' not recognized.")
+        return generate_from_plan_output(
+            once, daily, weekly, biweekly, monthly, yearly, accounts_by_name
+        )
 
-    generate_from_plan(plan)
-    this_date = from_date
-    data: List[Dict[str, float]] = [{a.name: a.amount for a in this_accounts_by_name}]
+    def strip_date_timestamp(dt):
+        return datetime(dt.year, dt.month, dt.day)
+
+    V = generate_from_plan(plan)
+    this_date = strip_date_timestamp(from_date)
+    data: List[Dict[str, float]] = [{a.name: a.dollars for k, a in V.accounts_by_name.items()}]
     while this_date <= to_date:
         this_bridge = bridges_by_date[this_date] if this_date in bridges_by_date else None
-        weeklyref = weekly[this_date.weekday()]
-        biweeklyref = biweekly[weekOfMonth(this_date) % 2][this_date.weekday()]
-        monthlyref = monthly[this_date.day]
-        yearlyref = yearly[this_date.month][this_date.day]
-        this_transactions = once[this_date] + daily + weeklyref + biweeklyref + monthlyref + yearlyref
+        weeklyref = V.weekly[this_date.weekday()]
+        biweeklyref = V.biweekly[weekOfMonth(this_date) % 2][this_date.weekday()]
+        monthlyref = V.monthly[this_date.day]
+        yearlyref = V.yearly[this_date.month][this_date.day]
+        this_transactions = V.once[this_date] + V.daily + weeklyref + biweeklyref + monthlyref + yearlyref
+
+        if this_date in bridges_by_date:
+            print(this_bridge)
 
         # Iterate over transactions
-        new_account_values = {a.name: a.value for a in this_accounts_by_name}
         for t in this_transactions:
             if t.from_account:
-                new_account_values[t.from_account] -= t.amount
+                V.accounts_by_name[t.from_account].dollars -= t.amount
             if t.to_account:
-                new_account_values[t.to_account] += t.amount
+                V.accounts_by_name[t.to_account].dollars += t.amount
 
         # Handle transaction APR
         # TODO: Handle the math of these for i in range statements with exponential functions instead to make it faster
-        for t in daily:
+        for t in V.daily:
             t.amount += t.APR/365*t.amount
         for t in weeklyref:
             for i in range(7):
@@ -100,29 +117,28 @@ def plot_accounts(
         for t in monthlyref:
             last_date = monthdelta(this_date, -1)
             nb_days = this_date - last_date
-            for i in range(nb_days):
+            for i in range(nb_days.days):
                 t.amount += t.APR/365*t.amount
         for t in yearlyref:
             for i in range(365):
                 t.amount += t.APR/365*t.amount
 
         # Handle account APR
-        for name, a in accounts_by_name.items():
-            new_account_values[name] += a.APR/365.0*new_account_values[name]
-
-        # Create the new accounts
-        this_accounts_by_name = {
-            name: Account(name, dollars, accounts_by_name[name].APR, this_date)
-            for name, dollars in new_account_values.items()
-        }
+        for name, a in V.accounts_by_name.items():
+            V.accounts_by_name[name].dollars += a.APR/365.0*V.accounts_by_name[name].dollars
 
         # Handle Bridges
         if this_bridge is not None:
+            print("New Bridge!")
             plan = this_bridge(plan)
-            generate_from_plan(plan)
+            V = generate_from_plan(plan)
+
+        # Add our data to our output
+        this_data = {a.name: a.dollars for _, a in V.accounts_by_name.items()}
+        this_data["Date"] = this_date
+        data.append(this_data)
 
         # Increment our current date
-        data.append({a.name: a.amount for a in this_accounts_by_name})
         this_date += timedelta(days=1)
 
     return data

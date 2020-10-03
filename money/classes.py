@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List, Callable, Optional
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Account:
     name: str
     dollars: float
@@ -11,7 +11,7 @@ class Account:
     created_on: datetime
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Transfer:
     name: str
     amount: float
@@ -19,13 +19,13 @@ class Transfer:
     from_account: Optional[str] = None
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Plan:
     accounts: List[Account]
     transfers: List[Transfer]
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Bridge:
     trigger_date: datetime
     generate_plan: Callable[[Plan], Plan]
@@ -34,38 +34,38 @@ class Bridge:
         return self.generate_plan(oldPlan)
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Once(Transfer):
     date: datetime = datetime.now()
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Daily(Transfer):
     APR: float = 0.0
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Weekly(Transfer):
     dayOfWeek: int = 0  # From Monday
     APR: float = 0.0
 
 
-@dataclass(frozen=True)
+@dataclass()
 class BiWeekly(Transfer):
     dayOfWeek: int = 0
     weekOffset: int = 0  # From first week of year
     APR: float = 0.0
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Monthly(Transfer):
-    dayOfMonth: int = 0
+    dayOfMonth: int = 1
     APR: float = 0.0
 
 
-@dataclass(frozen=True)
+@dataclass()
 class Yearly(Transfer):
-    month: int = 0
+    month: int = 1
     dayOfMonth: int = 0
     APR: float = 0.0
 
