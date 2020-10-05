@@ -10,7 +10,7 @@ RETIREMENT_DATE = datetime(2045, 1, 1)
 # Now let's create some accounts for our "young self"
 # This is an account called "Savings" starting with 0 dollars, that inflates at 10% APR compounded daily
 # (but with a constant inflation rate factored in), that starts on October 2nd 2020
-Accounts_Young = [Account("Savings", 0.0, 0.1-INFLATION_RATE, datetime(2020, 10, 2))]
+Accounts_Young = [Account("Savings", 0.0, APR(0.1-INFLATION_RATE, Period.YEARLY), datetime(2020, 10, 2))]
 
 # We are going to Save $1,000 a month into our savings account
 Transfers_Young = [Monthly("Salary", 1000, "Savings")]
@@ -25,7 +25,7 @@ Starting_Plan = Plan(
 # Our APR is going to lower to 7% in retirement so it's a safer account
 # We are not going to put any money in it yet, as that will be determined by how much money
 # we have made in life
-Accounts_Old = [Account("Savings", 0.0, 0.07 - INFLATION_RATE, RETIREMENT_DATE)]
+Accounts_Old = [Account("Savings", 0.0, APR(0.07 - INFLATION_RATE, Period.YEARLY), RETIREMENT_DATE)]
 
 # We are going to need $1,000 a month in retirement to live on (living under a bridge)
 Transfers_Old = [Monthly("Salary", -1000, "Savings")]
@@ -44,7 +44,7 @@ def retirement_bridge(p: Plan) -> Plan:
 # We put our bridge function inside our bridge class, as well as an activation date
 # which in this case is our retirement date.
 Bridges = [
-    Bridge(RETIREMENT_DATE, retirement_bridge)
+    DateBridge("Retirement", retirement_bridge, RETIREMENT_DATE)
 ]
 
 # And now we plot!
@@ -52,7 +52,8 @@ data = plot_accounts(
     starting_plan=Starting_Plan,
     bridges=Bridges,
     from_date=datetime(2020, 10, 2),
-    to_date=datetime(2080, 1, 1))
+    to_date=datetime(2080, 1, 1)
+)
 df = pd.DataFrame(data)
 df = df.set_index("Date")
 df.plot()

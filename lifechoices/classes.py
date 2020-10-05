@@ -1,6 +1,28 @@
 from datetime import datetime
 from dataclasses import dataclass
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, Dict
+from enum import Enum
+
+from lifechoices.utils import interest_rate_per_period
+
+class Period(Enum):
+    DAILY = 365
+    MONTHLY = 12
+    YEARLY = 1
+
+
+@dataclass()
+class APR:
+    value: float
+    period: Period = Period.DAILY
+
+    def to_daily(self):
+        if self.period == Period.DAILY:
+            return self
+        return APR(
+            value=interest_rate_per_period(self.value, Period.DAILY.value/self.period.value),
+            period=Period.DAILY
+        )
 
 
 @dataclass()
@@ -12,7 +34,7 @@ class Account:
     """
     name: str
     amount: float
-    APR: float
+    APR: APR
     created_on: datetime
 
 
@@ -26,27 +48,53 @@ class Transfer:
     """
     name: str
     amount: float
-    to_account: str
+    to_account: Optional[str]
     from_account: Optional[str] = None
 
     def check(self):
         """ Used to check the values are valid. """
-        raise NotImplementedError()
+        if self.amount == 0.0:
+            return ValueError("Amount should not be zero.")
+        if self.to_account == self.from_account:
+            return ValueError(f"to_account and from_account should not be equal. Got {self.to_account}")
 
 
 @dataclass()
 class Plan:
+    """ A list of accounts and transfers that you plan to make over a period of life. """
     accounts: List[Account]
     transfers: List[Transfer]
 
 
 @dataclass()
 class Bridge:
-    trigger_date: datetime
-    generate_plan: Callable[[Plan], Plan]
+    """
+    Represents as a function which takes a plan and returns a plan.
+    """
+    name: str
+    bridge_function: Callable[[Plan], Plan]
 
     def __call__(self, oldPlan: Plan):
-        return self.generate_plan(oldPlan)
+        return self.bridge_function(oldPlan)
+
+
+@dataclass()
+class DateBridge(Bridge):
+    """
+    A date on which a plan changes into a new plan.
+    Bridges could be buying a house, changing jobs, retiring, etc.
+    """
+    trigger_date: datetime
+
+
+@dataclass()
+class CallbackBridge(Bridge):
+    """
+    A logical operation on which a plan changes into a new plan.
+    Represented as a function which takes a plan and returns a plan.
+    Callback Bridges could be something like "When I pay off my house..."
+    """
+    trigger_function: Callable[[Dict[str, float]], bool]
 
 
 @dataclass()
@@ -63,7 +111,7 @@ class Daily(Transfer):
     Used to indicate transfers every day
     and increasing at APR daily compounded.
     """
-    APR: float = 0.0  # These are compounded daily
+    APR: APR = APR(0)
 
 
 @dataclass()
@@ -74,7 +122,7 @@ class Weekly(Transfer):
     and increasing at APR daily compounded.
     """
     dayOfWeek: int = 0  # From Monday
-    APR: float = 0.0
+    APR: APR = APR(0)
 
     def check(self):
         """ Check that all values are valid. """
@@ -92,7 +140,7 @@ class BiWeekly(Transfer):
     """
     dayOfWeek: int = 0  # 0 indicates Monday
     weekOffset: int = 0  # From first week of year
-    APR: float = 0.0
+    APR: APR = APR(0.0)
 
     def check(self):
         """ Check that all values are valid. """
@@ -109,7 +157,7 @@ class Monthly(Transfer):
     and increasing at APR daily compounded.
     """
     dayOfMonth: int = 1  # Must be between 1 and 28 for leap years, later I'll add negatives to indicate "from end of month"
-    APR: float = 0.0
+    APR: APR = APR(0)
 
     def check(self):
         """ Check that all values are valid. """
@@ -117,15 +165,16 @@ class Monthly(Transfer):
             raise ValueError(f"dayOfMonth needs to be between 1 and 28. Got {self.dayOfMonth}")
 
 
+# TODO: To Be Implemented
 @dataclass()
 class Yearly(Transfer):
     """
     Used to indicate yearly transfers done
-    on the dayOfMonth of month and increasing at APR daily compounded.
+    on the dayOfMonth of month and increasing at APR.
     """
     month: int = 1
     dayOfMonth: int = 1
-    APR: float = 0.0
+    APR: APR = APR(0)
 
     def check(self):
         """ Check that all values are valid. """
@@ -134,4 +183,22 @@ class Yearly(Transfer):
         if not (1 <= self.dayOfMonth <= 28):
             raise ValueError(f"dayOfMonth needs to be between 1 and 28. Got {self.dayOfMonth}")
 
+
+# TODO: Implement
+@dataclass()
+class NYearly(Transfer):
+    """
+    Used to indicate every n years a transfer done
+    on the dayOfMonth of month and increasing at APR.
+    """
+    nyears: int = 1
+    month: int = 1
+    dayOfMonth: int = 1
+    firstYear: int = 1997
+    APR: APR = APR(0)
+
+    def check(self):
+        """ Check that all values are valid. """
+        if not (self.nyears >= 1):
+            raise ValueError(f"nyears needs to be greater than or equal to 1. Got {self.nyears}")
 

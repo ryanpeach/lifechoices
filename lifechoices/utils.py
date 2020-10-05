@@ -5,7 +5,11 @@ from math import ceil
 def weekOfMonth(dt: datetime):
     """
     Returns the week of the month for the specified date.
-    REF: https://stackoverflow.com/questions/3806473/python-week-number-of-the-month
+    Not by simple division, but as you would see it on a calendar.
+
+    References
+    -----------
+    https://stackoverflow.com/questions/3806473/python-week-number-of-the-month
     """
     first_day = dt.replace(day=1)
 
@@ -15,9 +19,13 @@ def weekOfMonth(dt: datetime):
     return int(ceil(adjusted_dom/7.0))
 
 
-def monthdelta(date, delta):
+def monthdelta(date: datetime, delta: int) -> datetime:
     """
-    REF: https://stackoverflow.com/questions/3424899/whats-the-simplest-way-to-subtract-a-month-from-a-date-in-python
+    Adds or subtracts months (`delta`) from a date (`date`).
+
+    References
+    -----------
+    https://stackoverflow.com/questions/3424899/whats-the-simplest-way-to-subtract-a-month-from-a-date-in-python
     """
     m, y = (date.month+delta) % 12, date.year + ((date.month)+delta-1) // 12
     if not m: m = 12
@@ -27,5 +35,37 @@ def monthdelta(date, delta):
     return date.replace(day=d,month=m, year=y)
 
 
-def strip_date_timestamp(dt):
+def strip_date_timestamp(dt: datetime) -> datetime:
+    """ Get's rid of the hour, minute, and second of a datetime. """
     return datetime(dt.year, dt.month, dt.day)
+
+
+def effective_interest_rate_per_period(interest_rate_per_period: float, compounding_times_per_period: float) -> float:
+    """
+    Finding the interest rate as if it has been compounded n times over 1 period.
+
+    Reference
+    ----------
+    https://www.calculatorsoup.com/calculators/financial/effective-interest-rate-calculator.php
+    """
+    return (1 + interest_rate_per_period / compounding_times_per_period) ** compounding_times_per_period - 1
+
+
+def interest_rate_per_period(effective_interest_rate_per_period: float, compounding_times_per_period: float) -> float:
+    """ Finding the interest rate from an effective interest rate that has been compounded n times already. """
+    return (-1 + (1 + effective_interest_rate_per_period)**(1/compounding_times_per_period)) * compounding_times_per_period
+
+
+def effective_interest_rate_per_t_periods(
+        interest_rate_per_period: float,
+        compounding_times_per_period: float,
+        t: float
+) -> float:
+    """
+    Finding the interest rate as if it has been compounded n*t times over t periods.
+
+    Reference
+    ----------
+    https://www.calculatorsoup.com/calculators/financial/effective-interest-rate-calculator.php
+    """
+    return (1 + interest_rate_per_period / compounding_times_per_period) ** (compounding_times_per_period * t) - 1
