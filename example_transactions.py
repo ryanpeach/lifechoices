@@ -1,4 +1,4 @@
-from money import *
+from lifechoices import *
 from datetime import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
