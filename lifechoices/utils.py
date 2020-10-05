@@ -69,3 +69,16 @@ def effective_interest_rate_per_t_periods(
     https://www.calculatorsoup.com/calculators/financial/effective-interest-rate-calculator.php
     """
     return (1 + interest_rate_per_period / compounding_times_per_period) ** (compounding_times_per_period * t) - 1
+
+def price_at_year(
+        price: float,
+        yearly_inflation_rate: float,
+        date: datetime,
+        today: datetime = datetime.now()
+):
+    """ Returns the price of something with inflation some amount of time from now. """
+    return price * effective_interest_rate_per_t_periods(
+        interest_rate_per_period=yearly_inflation_rate,
+        compounding_times_per_period=1,
+        t=(date - today).days/365
+    ) + price

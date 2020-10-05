@@ -5,6 +5,7 @@ from enum import Enum
 
 from lifechoices.utils import interest_rate_per_period
 
+
 class Period(Enum):
     DAILY = 365
     MONTHLY = 12
@@ -16,7 +17,7 @@ class APR:
     value: float
     period: Period = Period.DAILY
 
-    def to_daily(self):
+    def to_daily(self) -> "APR":
         if self.period == Period.DAILY:
             return self
         return APR(
