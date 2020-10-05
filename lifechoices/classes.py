@@ -5,14 +5,25 @@ from typing import List, Callable, Optional
 
 @dataclass()
 class Account:
+    """
+    An account like a bank account, or an asset,
+    which can change over time with an APR,
+    or be transfered to and from.
+    """
     name: str
-    dollars: float
+    amount: float
     APR: float
     created_on: datetime
 
 
 @dataclass()
 class Transfer:
+    """
+    A transfer is a movement of money between two accounts.
+    If an account is "None" it implies it is an external account, like lost money or spent money.
+    Positive amounts flow from the to_account to the from_account.
+    Negative amounts transfer backwards.
+    """
     name: str
     amount: float
     to_account: str

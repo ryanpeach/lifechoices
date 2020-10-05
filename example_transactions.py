@@ -15,7 +15,7 @@ Accounts_Old = [Account("Savings", 0.0, 0.07-INFLATION_RATE, Retirement_Date)]
 Transfers_Old = [Monthly("Salary", -1000, "Savings")]
 
 def our_bridge(p: Plan) -> Plan:
-    Accounts_Old[0].dollars = p.accounts[0].dollars
+    Accounts_Old[0].amount = p.accounts[0].amount
     return Plan(
         accounts=Accounts_Old,
         transfers=Transfers_Old
@@ -28,7 +28,11 @@ Starting_Plan = Plan(
     transfers=Transfers_Young
 )
 
-data = plot_accounts(starting_plan=Starting_Plan, bridges=Bridges, from_date=datetime(2020,10,2), to_date=datetime(2080, 1, 1))
+data = plot_accounts(
+    starting_plan=Starting_Plan,
+    bridges=Bridges,
+    from_date=datetime(2020, 10, 2),
+    to_date=datetime(2080, 1, 1))
 df = pd.DataFrame(data)
 df = df.set_index("Date")
 df.plot()

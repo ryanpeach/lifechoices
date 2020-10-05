@@ -54,12 +54,19 @@ def plot_accounts(
         bridges: List[Bridge],
         from_date: datetime,
         to_date: datetime
-):
+) -> List[Dict[str, float]]:
+    """
+    This is the main data plotting function in the code.
+    It takes a starting plan, a sequence of bridges, and a to/from date.
+    It returns a list of dictionaries (Like a pandas dataframe) containing accounts and their values, along with a
+    tag called "Date" that tells you what date it was. Sorted by date ascending.
+    Easiest thing to do is to take this and create a pandas Dataframe from it, and use that to plot it.
+    """
     plan = starting_plan
     bridges_by_date = {b.trigger_date: b for b in bridges}
     V = _generate_from_plan(plan)
     this_date = strip_date_timestamp(from_date)
-    data: List[Dict[str, float]] = [{a.name: a.dollars for k, a in V.accounts_by_name.items()}]
+    data: List[Dict[str, float]] = [{a.name: a.amount for k, a in V.accounts_by_name.items()}]
     while this_date <= to_date:
         this_bridge = bridges_by_date[this_date] if this_date in bridges_by_date else None
         weeklyref = V.weekly[this_date.weekday()]
@@ -74,9 +81,9 @@ def plot_accounts(
         # Iterate over transactions
         for t in this_transactions:
             if t.from_account:
-                V.accounts_by_name[t.from_account].dollars -= t.amount
+                V.accounts_by_name[t.from_account].amount -= t.amount
             if t.to_account:
-                V.accounts_by_name[t.to_account].dollars += t.amount
+                V.accounts_by_name[t.to_account].amount += t.amount
 
         # Handle transaction APR
         # TODO: Handle the math of these for i in range statements with exponential functions instead to make it faster
@@ -99,7 +106,7 @@ def plot_accounts(
 
         # Handle account APR
         for name, a in V.accounts_by_name.items():
-            V.accounts_by_name[name].dollars += a.APR/365.0*V.accounts_by_name[name].dollars
+            V.accounts_by_name[name].amount += a.APR / 365.0 * V.accounts_by_name[name].amount
 
         # Handle Bridges
         if this_bridge is not None:
@@ -108,7 +115,7 @@ def plot_accounts(
             V = _generate_from_plan(plan)
 
         # Add our data to our output
-        this_data = {a.name: a.dollars for _, a in V.accounts_by_name.items()}
+        this_data = {a.name: a.amount for _, a in V.accounts_by_name.items()}
         this_data["Date"] = this_date
         data.append(this_data)
 
