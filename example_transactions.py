@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from lifechoices import *
 from datetime import datetime
 import pandas as pd

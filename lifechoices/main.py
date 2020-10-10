@@ -54,6 +54,7 @@ def _generate_from_plan(p: Plan) -> _GenerateFromPlanOutput:
 
 
 # TODO: Append all dates removing the timestamp
+# This is our main function
 def plot_accounts(
         starting_plan: Plan,
         bridges: List[Bridge],
