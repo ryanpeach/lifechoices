@@ -2,13 +2,15 @@ from django.db import models
 from django.utils import timezone
 
 
+# =============== Basics ==================
+
 class APR(models.Model):
     class APRPeriod(models.IntegerChoices):
         DAILY = 365
         MONTHLY = 12
         YEARLY = 1
 
-    value = models.FloatField()
+    value = models.FloatField(default=0)
     period = models.IntegerField(
         choices=APRPeriod.choices,
         default=APRPeriod.DAILY
@@ -22,35 +24,138 @@ class APR(models.Model):
         return f"Period: {self.period} - Value: {self.value}"
 
 
-# example model. Feel free to delete.
-# you will have to delete the 0002_account.py file
-# and delete the db.sqlite3 More like SQLIES
-# and run python manage.py migrate
-class Account(models.Model):
-    apr = models.ForeignKey(APR, on_delete=models.CASCADE)
-    name = models.CharField(max_length=255)
+class Plan(models.Model):
+    """ Just the name of our plan """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    created = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        ordering = ['created', 'name']
 
     def __str__(self):
-        return self.name
+        return f"Plan: {self.name}"
 
 
+class Account(models.Model):
+    """
+    An account like a bank account, or an asset,
+    which can change over time with an APR,
+    or be transfered to and from.
+    """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=True)
+    amount = models.FloatField(default=0)
+    apr = models.ForeignKey(APR, on_delete=models.SET_NULL, null=True)
+    created = models.DateTimeField(auto_now=True, editable=False)
+    
+    class Meta:
+        ordering = ['created', 'name']
+    
+    def __str__(self):
+        return f"Account: {self.name}"
 
 
-# class Period(Enum):
-#     DAILY = 365
-#     MONTHLY = 12
-#     YEARLY = 1
+class Transfer(models.Model):
+    """
+    A transfer is a movement of money between two accounts.
+    If an account is "None" it implies it is an external account, like lost money or spent money.
+    Positive amounts flow from the to_account to the from_account.
+    Negative amounts transfer backwards.
+    """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=True)
+    amount = models.FloatField(default=0)
+    as_percentage = models.BooleanField(default=False)
+    apr = models.ForeignKey(APR, on_delete=models.SET_NULL, null=True)
+    start_date = models.DateTimeField(default=timezone.now)
+    to_account = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name="+")
+    from_account = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True, related_name="+")
+    repeat_n = models.IntegerField(default=1)
+    created = models.DateTimeField(auto_now=True, editable=False)
+
+    # The types of transfers availible
+    START = "SS"
+    DAILY = 'DD'
+    NDAILY = 'ND'
+    WEEKLY = 'WW'
+    BIWEEKLY = 'BW'
+    MONTHLY = 'MM'
+    NMONTHLY = 'NM'
+    YEARLY = 'YY'
+    NYEARLY = "NY"
+    END = "EE"
+    KIND = [
+        (START, "Start"),
+        (DAILY, "Daily"),
+        (NDAILY, "NDaily"),
+        (WEEKLY, "Weekly"),
+        (BIWEEKLY, "BiWeekly"),
+        (MONTHLY, "Monthly"),
+        (NMONTHLY, "NMonthly"),
+        (YEARLY, "Yearly"),
+        (NYEARLY, "NYearly"),
+        (END, "End")
+    ]
+    interval = models.CharField(
+        max_length=2,
+        choices=KIND,
+        default=START,
+    )
+
+    # TODO: Add data validation
+
+    def __str__(self):
+        return f"Transfer: {self.name}, Interval: {self.interval}"
+
+    class Meta:
+        ordering = ['created', 'name']
 
 
-# @dataclass()
-# class APR:
-#     value: float
-#     period: Period = Period.DAILY
+# ============== Bridges =============
 
-#     def to_daily(self) -> "APR":
-#         if self.period == Period.DAILY:
-#             return self
-#         return APR(
-#             value=interest_rate_per_period(self.value, Period.DAILY.value/self.period.value),
-#             period=Period.DAILY
-#         )
+class DateBridge(models.Model):
+    """ A bridge that activates on a certain date """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    activates_on = models.DateField(default=timezone.now)
+    from_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
+    to_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
+    created = models.DateTimeField(auto_now=True, editable=False)
+
+
+class ValueBridge(models.Model):
+    """ A bridge that activates after a certain account value is reached. """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    from_account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
+    activates_at = models.FloatField(default=0.0)
+    from_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
+    to_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
+    created = models.DateTimeField(auto_now=True, editable=False)
+
+
+# ============ Goals =============
+
+class DateValueGoal(models.Model):
+    """ A goal for an account to reach a certain value by a certain date. """
+    name = models.CharField(max_length=255, unique=True, primary_key=True)
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
+    goal_amount = models.FloatField(default=0.0)
+    by_date = models.DateField(default=timezone.now)
+    created = models.DateTimeField(auto_now=True, editable=False)
+
+
+class DateValueGoalVariable(models.Model):
+    """ A list of transfers you can edit to reach your goal. """
+    goal = models.ForeignKey(DateValueGoal, on_delete=models.CASCADE, null=False, related_name="+")
+    transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, null=False, related_name="+")
+    top_range = models.FloatField(default=0.0)
+    bottom_range = models.FloatField(default=0.0)
+    created = models.DateTimeField(auto_now=True, editable=False)
+
+
+class DateValueGoalConstraint(models.Model):
+    """ A list of accounts you must maintain to reach your goal. """
+    goal = models.ForeignKey(DateValueGoal, on_delete=models.CASCADE, null=False, related_name="+")
+    account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
+    top_range = models.FloatField(default=0.0)
+    bottom_range = models.FloatField(default=0.0)
+    created = models.DateTimeField(auto_now=True, editable=False)
