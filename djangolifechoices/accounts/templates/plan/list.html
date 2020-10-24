@@ -1,0 +1,35 @@
+{% extend "plan/base.html" %}
+
+{% block title %} My Account {% endblock %}
+
+{% block content %}
+    <h1>My Plans</h1>
+    {% for plan in plans %}
+        <div>
+        <h2> 
+            <a href"{{ plan.get_absolute_url }}">
+                {{ plan.name }}
+            </a>
+        </h2>
+        <p class="date">
+            Published {{ plan.publish }} by {{ plan.user.username }}
+        </p>
+            <h3>Accounts</h3>
+            {% for account in plan.account_set.objects.all() %}
+                <div>
+                {{ account.name }}
+                {{ account.amount }}
+                {{ account.apr }}
+                </div>
+            {% endfor %} 
+            <h3>Transfers</h3>
+            {% for transfer in plan.transfer_set.objects.all() %}
+                <div>
+                {{ transfer.name }}
+                {{ transfer.amount }}
+                {{ transfer.interval }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+{% endblock %}

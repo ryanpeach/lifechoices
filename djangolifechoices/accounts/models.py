@@ -1,5 +1,7 @@
 from django.db import models
+from django import forms
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 
 # =============== Basics ==================
@@ -24,10 +26,18 @@ class APR(models.Model):
         return f"Period: {self.period} - Value: {self.value}"
 
 
+class PublishedManger(models.Manager):
+    def get_queryset(self):
+        return super(PublishedManager, self).get_queryset().filter(status='published')
+
+
 class Plan(models.Model):
     """ Just the name of our plan """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default='none')
     created = models.DateTimeField(default=timezone.now)
+    objects = models.Manager() # default manager
+    published = PublishedManger() # published manager
     
     class Meta:
         ordering = ['created', 'name']
@@ -43,6 +53,7 @@ class Account(models.Model):
     or be transfered to and from.
     """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=True)
     amount = models.FloatField(default=0)
     apr = models.ForeignKey(APR, on_delete=models.SET_NULL, null=True)
@@ -63,6 +74,7 @@ class Transfer(models.Model):
     Negative amounts transfer backwards.
     """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=True)
     amount = models.FloatField(default=0)
     as_percentage = models.BooleanField(default=False)
@@ -116,6 +128,7 @@ class Transfer(models.Model):
 class DateBridge(models.Model):
     """ A bridge that activates on a certain date """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     activates_on = models.DateField(default=timezone.now)
     from_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
     to_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
@@ -125,6 +138,7 @@ class DateBridge(models.Model):
 class ValueBridge(models.Model):
     """ A bridge that activates after a certain account value is reached. """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     from_account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
     activates_at = models.FloatField(default=0.0)
     from_plan = models.ForeignKey(Plan, on_delete=models.CASCADE, null=False, related_name="+")
@@ -137,6 +151,7 @@ class ValueBridge(models.Model):
 class DateValueGoal(models.Model):
     """ A goal for an account to reach a certain value by a certain date. """
     name = models.CharField(max_length=255, unique=True, primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
     goal_amount = models.FloatField(default=0.0)
     by_date = models.DateField(default=timezone.now)
@@ -146,6 +161,7 @@ class DateValueGoal(models.Model):
 class DateValueGoalVariable(models.Model):
     """ A list of transfers you can edit to reach your goal. """
     goal = models.ForeignKey(DateValueGoal, on_delete=models.CASCADE, null=False, related_name="+")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     transfer = models.ForeignKey(Transfer, on_delete=models.CASCADE, null=False, related_name="+")
     top_range = models.FloatField(default=0.0)
     bottom_range = models.FloatField(default=0.0)
@@ -155,6 +171,7 @@ class DateValueGoalVariable(models.Model):
 class DateValueGoalConstraint(models.Model):
     """ A list of accounts you must maintain to reach your goal. """
     goal = models.ForeignKey(DateValueGoal, on_delete=models.CASCADE, null=False, related_name="+")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=False, default="none")
     account = models.ForeignKey(Account, on_delete=models.CASCADE, null=False, related_name="+")
     top_range = models.FloatField(default=0.0)
     bottom_range = models.FloatField(default=0.0)
