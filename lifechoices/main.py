@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-from lifechoices.classes import Account, Bridge, DateBridge, CallbackBridge, Plan, Once, Daily, Weekly, BiWeekly, Monthly, Yearly, NYearly
 from lifechoices.utils import weekOfMonth, monthdelta, strip_date_timestamp, effective_interest_rate_per_t_periods
 
 

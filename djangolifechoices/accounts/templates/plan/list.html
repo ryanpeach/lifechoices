@@ -1,9 +1,17 @@
-{% extend "plan/base.html" %}
+{% extend "templates/base.html" %}
 
 {% block title %} My Account {% endblock %}
 
+
+
+
 {% block content %}
     <h1>My Plans</h1>
+    
+    {%load plotly_dash%}
+
+    {%plotly_app name="plotly_dash"%}
+
     {% for plan in plans %}
         <div>
         <h2> 
