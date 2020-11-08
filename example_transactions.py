@@ -1,7 +1,6 @@
 from lifechoices import *
 from datetime import datetime
 import pandas as pd
-import plotly.express as px
 
 # First we will create some constants
 INFLATION_RATE = .05
@@ -52,15 +51,47 @@ Bridges = [
     DateBridge("Retirement", retirement_bridge, RETIREMENT_DATE)
 ]
 
-# And now we plot!
-data = plot_accounts(
-    starting_plan=Starting_Plan,
-    bridges=Bridges,
-    from_date=datetime(2020, 10, 2),
-    to_date=datetime(2080, 1, 1),
-    tall_data=True
-)
 
-df = pd.DataFrame(data)
-fig = px.line(df, x="Date", color="Account", y="Value")
-fig.show()
+# And now we plot!
+# Just to be fancy, we will use plotly dash
+import dash
+import dash_html_components as html
+import dash_core_components as dcc
+import plotly.express as px
+
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+app.layout = html.Div([
+    dcc.DatePickerRange(
+        id='date-picker',
+        min_date_allowed=datetime(1995, 8, 5),
+        max_date_allowed=datetime(2100, 8, 5),
+        initial_visible_month=datetime.now(),
+        start_date=strip_date_timestamp(datetime.now()),
+        end_date=strip_date_timestamp(datetime.now()+timedelta(days=50*365))
+    ),
+    dcc.Graph(id='my-plot')
+])
+
+@app.callback(
+    dash.dependencies.Output('my-plot', 'figure'),
+    [dash.dependencies.Input('date-picker', 'start_date'),
+     dash.dependencies.Input('date-picker', 'end_date')])
+def plot(start_date: str, end_date: str):
+    start_date = datetime.strptime(start_date.split('T')[0], '%Y-%m-%d')
+    end_date = datetime.strptime(end_date.split('T')[0], '%Y-%m-%d')
+    data = plot_accounts(
+        starting_plan=Starting_Plan,
+        bridges=Bridges,
+        from_date=start_date,
+        to_date=end_date,
+        tall_data=True
+    )
+    df = pd.DataFrame(data)
+    fig = px.line(df, x="Date", color="Account", y="Value")
+    return fig
+
+
+if __name__ == '__main__':
+    app.run_server(debug=True)
