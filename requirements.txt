@@ -1,2 +1,5 @@
 django
 django-plotly-dash
+plotly
+dash
+pandas
