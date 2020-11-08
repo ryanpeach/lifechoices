@@ -1,7 +1,7 @@
 from lifechoices import *
 from datetime import datetime
 import pandas as pd
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # First we will create some constants
 INFLATION_RATE = .05
@@ -25,10 +25,15 @@ Starting_Plan = Plan(
 # Our APR is going to lower to 7% in retirement so it's a safer account
 # We are not going to put any money in it yet, as that will be determined by how much money
 # we have made in life
-Accounts_Old = [Account("Savings", 0.0, APR(0.07 - INFLATION_RATE, Period.YEARLY), RETIREMENT_DATE)]
+Accounts_Old = [
+    Account("Savings", 0.0, APR(0.07 - INFLATION_RATE, Period.YEARLY), RETIREMENT_DATE),
+    Account("Checkings", 0.0, APR(0.03 - INFLATION_RATE, Period.YEARLY), RETIREMENT_DATE)
+]
 
-# We are going to need $1,000 a month in retirement to live on (living under a bridge)
-Transfers_Old = [Monthly("Salary", -1000, "Savings")]
+# We are allowed to withdraw $1,000 a month in retirement
+# We are going to need $900 a month in retirement to live on (living under a bridge)
+Transfers_Old = [Monthly("Savings", -1000, "Checkings"),
+                 Monthly("Checkings", -900, None)]
 
 # Now we will learn about bridges. Bridges allow us to apply "logic" to our actions on certain dates.
 # This bridge moves all the money in our current plan's account, and puts it in our old person savings account.
@@ -52,9 +57,10 @@ data = plot_accounts(
     starting_plan=Starting_Plan,
     bridges=Bridges,
     from_date=datetime(2020, 10, 2),
-    to_date=datetime(2080, 1, 1)
+    to_date=datetime(2080, 1, 1),
+    tall_data=True
 )
+
 df = pd.DataFrame(data)
-df = df.set_index("Date")
-df.plot()
-plt.show()
+fig = px.line(df, x="Date", color="Account", y="Value")
+fig.show()

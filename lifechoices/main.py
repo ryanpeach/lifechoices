@@ -58,7 +58,8 @@ def plot_accounts(
         starting_plan: Plan,
         bridges: List[Bridge],
         from_date: datetime,
-        to_date: datetime
+        to_date: datetime,
+        tall_data: bool = True,
 ) -> List[Dict[str, float]]:
     """
     This is the main data plotting function in the code.
@@ -66,13 +67,36 @@ def plot_accounts(
     It returns a list of dictionaries (Like a pandas dataframe) containing accounts and their values, along with a
     tag called "Date" that tells you what date it was. Sorted by date ascending.
     Easiest thing to do is to take this and create a pandas Dataframe from it, and use that to plot it.
+
+    If you use the flag tall_data the data will look like this:
+    Date  Account  Value
+    Date1 Account1 Value1
+    Date1 Account2 Value2
+    Date2 Account1 Value3
+    Date2 Account2 Value4
+    ...   ...      ...
+
+    If you set it to false the data will look like this:
+    Date  Account1 Account2 ...
+    Date1 Value1   Value2   ...
+    Date2 Value3   Value4   ...
+    ...   ...      ...
+
     """
     plan = starting_plan
     bridges_by_date = {b.trigger_date: b for b in bridges if isinstance(b, DateBridge)}
     V = _generate_from_plan(plan)
     this_date = strip_date_timestamp(from_date)
-    data: List[Dict[str, float]] = [{a.name: a.amount for k, a in V.accounts_by_name.items()}]
-    while this_date <= to_date:
+    first_data = {a.name: a.amount for k, a in V.accounts_by_name.items()}
+    first_data["Date"] = from_date
+    data: List[Dict[str, float]] = [first_data]
+    while this_date < to_date:
+        # Increment our current date
+        # We do this at the beginning of the loop because we assume
+        # That you know the "true" account values at the end of the start day
+        this_date += timedelta(days=1)
+
+        # Get our references to our transfer lists
         this_bridge = bridges_by_date[this_date] if this_date in bridges_by_date else None
         weeklyref = V.weekly[this_date.weekday()]
         biweeklyref = V.biweekly[weekOfMonth(this_date) % 2][this_date.weekday()]
@@ -137,7 +161,24 @@ def plot_accounts(
                 print(f"Bridge {b.name} Activated on {this_date}")
                 break
 
-        # Increment our current date
-        this_date += timedelta(days=1)
+    # Make our data "tall"
+    if tall_data:
+        # Get the represented in the dataset
+        all_accounts = set(V.accounts_by_name.keys())
+
+        # Make a list for each output column
+        account, date, value = [], [], []
+        for row in data:
+            for acc in all_accounts:
+                date.append(row["Date"])
+                account.append(acc)
+                if acc in row:
+                    value.append(row[acc])
+                else:
+                    value.append(float("NaN"))
+
+        return {"Account": account,
+                "Date": date,
+                "Value": value}
 
     return data
