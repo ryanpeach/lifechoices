@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from elements import views
 
 app_accounts = 'elements'
 

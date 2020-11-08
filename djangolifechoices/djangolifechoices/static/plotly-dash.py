@@ -22,5 +22,5 @@ PLOTLY_DASH = {
     "cache_arguments": True,
 
     # Flag controlling local serving of assets
-    "serve_locally': True,
+    "serve_locally': True
 }

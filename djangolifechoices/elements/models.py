@@ -86,32 +86,30 @@ class Transfer(models.Model):
     created = models.DateTimeField(auto_now=True, editable=False)
 
     # The types of transfers availible
-    START = "SS"
+    ATSTART = "SS"
     DAILY = 'DD'
     NDAILY = 'ND'
     WEEKLY = 'WW'
-    BIWEEKLY = 'BW'
+    NWEEKLY = 'NW'
     MONTHLY = 'MM'
     NMONTHLY = 'NM'
     YEARLY = 'YY'
     NYEARLY = "NY"
-    END = "EE"
-    KIND = [
-        (START, "Start"),
-        (DAILY, "Daily"),
-        (NDAILY, "NDaily"),
-        (WEEKLY, "Weekly"),
-        (BIWEEKLY, "BiWeekly"),
-        (MONTHLY, "Monthly"),
-        (NMONTHLY, "NMonthly"),
-        (YEARLY, "Yearly"),
-        (NYEARLY, "NYearly"),
-        (END, "End")
-    ]
+    KINDS = {
+        ATSTART: "Start",
+        DAILY: "Daily",
+        NDAILY: "NDaily",
+        WEEKLY: "Weekly",
+        NWEEKLY: "NWeekly",
+        MONTHLY: "Monthly",
+        NMONTHLY: "NMonthly",
+        YEARLY: "Yearly",
+        NYEARLY: "NYearly",
+    }
     interval = models.CharField(
         max_length=2,
-        choices=KIND,
-        default=START,
+        choices=list(KINDS.items()),
+        default=ATSTART,
     )
 
     # TODO: Add data validation

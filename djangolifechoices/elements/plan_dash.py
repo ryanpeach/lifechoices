@@ -2,7 +2,6 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 
-from lifechoices import plot_accounts
 from django_plotly_dash import DjangoDash
 
 app = DjangoDash('plan_dash')   # replaces dash.Dash
