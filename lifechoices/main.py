@@ -1,10 +1,12 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any, Set
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from collections import defaultdict
 
 from lifechoices.classes import Account, Bridge, DateBridge, CallbackBridge, Plan, Once, Daily, Weekly, BiWeekly, Monthly, Yearly, NYearly
 from lifechoices.utils import weekOfMonth, monthdelta, strip_date_timestamp, effective_interest_rate_per_t_periods
+
+import pandas as pd
 
 
 @dataclass(frozen=False)
@@ -163,22 +165,49 @@ def plot_accounts(
 
     # Make our data "tall"
     if tall_data:
-        # Get the represented in the dataset
-        all_accounts = set(V.accounts_by_name.keys())
-
-        # Make a list for each output column
-        account, date, value = [], [], []
-        for row in data:
-            for acc in all_accounts:
-                date.append(row["Date"])
-                account.append(acc)
-                if acc in row:
-                    value.append(row[acc])
-                else:
-                    value.append(float("NaN"))
-
-        return {"Account": account,
-                "Date": date,
-                "Value": value}
+        return wide_to_tall(data)
 
     return data
+
+
+def wide_to_tall(data: Union[List[Dict[str, Any]], pd.DataFrame]) -> Union[Dict[str, List[Any]], pd.DataFrame]:
+    """
+    If you use the flag tall_data the data will look like this:
+    Date  Account  Value
+    Date1 Account1 Value1
+    Date1 Account2 Value2
+    Date2 Account1 Value3
+    Date2 Account2 Value4
+    ...   ...      ...
+
+    If you set it to false the data will look like this:
+    Date  Account1 Account2 ...
+    Date1 Value1   Value2   ...
+    Date2 Value3   Value4   ...
+    ...   ...      ...
+    """
+    # Handle dataframes
+    if isinstance(data, pd.DataFrame):
+        create_dataframe = True
+        data = [dict(row) for _, row in data.iterrows()]
+    else:
+        create_dataframe = False
+    # Get the accounts represented in the dataset
+    account_names = {key for row in data for key in row if key != "Date"}
+
+    # Make a list for each output column
+    account, date, value = [], [], []
+    for row in data:
+        for acc in account_names:
+            date.append(row["Date"])
+            account.append(acc)
+            if acc in row:
+                value.append(row[acc])
+            else:
+                value.append(float("NaN"))
+    out = {"Account": account,
+           "Date": date,
+           "Value": value}
+    if create_dataframe:
+        return pd.DataFrame(out)
+    return out
