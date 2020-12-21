@@ -10,6 +10,8 @@ urlpatterns = [
     url(r'^logout/$', auth_views.logout, name='logout'),
     url(r'^oauth/', include('social_django.urls', namespace='social')),  # <--
     url(r'^admin/', admin.site.urls),
+    url(r'^settings/$', core_views.settings, name='settings'),
+    url(r'^settings/password/$', core_views.password, name='password'),
 ]
 
 LOGIN_URL = 'login'

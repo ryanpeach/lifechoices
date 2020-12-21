@@ -1,5 +1,7 @@
 django
 django-plotly-dash
+social-auth-app-django
+django-payments
 plotly
 dash
 pandas
