@@ -6,11 +6,11 @@ from elements.models import Plan
 
 # Create your views here.
 def home(request):
-    return render(request, os.path.join(BASE_DIR, 'elements','templates','base.html'))
+    return render(request, 'base.html')
 
 def plan_list(request):
     plan = Plan.published.all()
-    return render(request, os.path.join(BASE_DIR, 'elements', 'plan', 'list.html'), {'plan': plan})
+    return render(request, 'list.html'), {'plan': plan}
 
 def plan_detail(request, year, month, day):
     """Will sort plans by date created"""
@@ -22,6 +22,6 @@ def plan_detail(request, year, month, day):
         publish__day=day
     )
 
-    return render(request, os.path.join(BASE_DIR, 'elements', 'plan', 'detail.html'), {'plan': plan})
+    return render(request, 'detail.html'), {'plan': plan}
 
 

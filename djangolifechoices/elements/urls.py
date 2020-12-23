@@ -1,7 +1,8 @@
 from django.urls import path
 from elements import views
+from django.contrib.auth import views as auth_views
 
-app_accounts = 'elements'
+app_name = 'elements'
 
 urlpattern = [
     #plan views
